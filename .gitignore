@@ -1,0 +1,16 @@
+# Virtual environment
+virtual_env_1/
+
+# Database file (don't commit local DB)
+*.db
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+
+# Environment variables (never commit secrets)
+.env
+
+# VS Code settings
+.vscode/
