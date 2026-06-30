@@ -9,5 +9,6 @@ class User(Base):
     email: Mapped[str] = mapped_column(unique=True)
     is_active: Mapped[bool] = mapped_column(default=True)
     password: Mapped[str] = mapped_column()
+    phone: Mapped[str] = mapped_column(nullable=True)
     
     

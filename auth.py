@@ -1,19 +1,23 @@
 from passlib.context import CryptContext
 from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
+from dotenv import load_dotenv
+import os
 
 # bcrypt is the hashing algorithm - same as bcrypt in Node.js
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+load_dotenv()
+
 # SECRET_KEY - used to sign the token, never commit this to git
 # In production, store this in environment variables
-SECRET_KEY = "your-secret-key"
+SECRET_KEY : str = os.getenv("SECRET_KEY", '')
 
 # HS256 - standard JWT signing algorithm
-ALGORITHM = "HS256"
+ALGORITHM: str = os.getenv("ALGORITHM", '')
 
 # token expires after 30 minutes - after this, user must login again
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES") or 30)
 
 
 def hash_password(password: str) -> str:

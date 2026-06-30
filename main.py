@@ -89,19 +89,18 @@
 # async def products(product: ProductIn):
 #     return product
     
-from fastapi import FastAPI, Depends, HTTPException
-from database import engine, Base, get_db
-from models import User
-from schemas import UserCreate, UserOut, UserLogin, UserToken
-from sqlalchemy.orm import Session
-from auth import hash_password, verify_password, create_access_token
-from oauth2 import get_current_user
+from fastapi import FastAPI
+from database import engine, Base
 import time
 from fastapi import Request
 from fastapi.middleware.cors import CORSMiddleware
+from routers import users, auth
 
 app = FastAPI()
 Base.metadata.create_all(bind=engine)
+
+app.include_router(users.router)
+app.include_router(auth.router)
 
 # 1: UserCreate here is from model -> server to database
 # 2: UserOut needs to be same in name as the User model
@@ -136,75 +135,75 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-@app.post('/users', response_model=UserOut, status_code=201)
-async def create_user(user: UserCreate, db: Session = Depends(get_db)):
-    new_user = User(name=user.name, email=user.email)
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user
+# @app.post('/users', response_model=UserOut, status_code=201)
+# async def create_user(user: UserCreate, db: Session = Depends(get_db)):
+#     new_user = User(name=user.name, email=user.email)
+#     db.add(new_user)
+#     db.commit()
+#     db.refresh(new_user)
+#     return new_user
 
-# get all users
-@app.get('/users', response_model=list[UserOut], status_code=200)
-async def get_users(db: Session = Depends(get_db), current_user = Depends(get_current_user)):
-    query=db.query(User).all()
-    return query if len(query) > 0 else {'message': 'There are no users to display'}
+# # get all users
+# @app.get('/users', response_model=list[UserOut], status_code=200)
+# async def get_users(db: Session = Depends(get_db), current_user = Depends(get_current_user)):
+#     query=db.query(User).all()
+#     return query if len(query) > 0 else {'message': 'There are no users to display'}
 
-# get user by id
-@app.get('/users/{user_id}', response_model=UserOut, status_code=200)
-async def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
-    query=db.query(User).filter(User.id == user_id).first()
-    if not query:
-        raise HTTPException(status_code=404, detail='User not found')
-    return query
+# # get user by id
+# @app.get('/users/{user_id}', response_model=UserOut, status_code=200)
+# async def get_user_by_id(user_id: int, db: Session = Depends(get_db)):
+#     query=db.query(User).filter(User.id == user_id).first()
+#     if not query:
+#         raise HTTPException(status_code=404, detail='User not found')
+#     return query
 
 
-# update user details using put
-@app.put('/users/{user_id}', response_model=UserOut, status_code=200)
-async def update_user_details(user_id: int, new_data: UserCreate, db:Session = Depends(get_db)):
-    query = query=db.query(User).filter(User.id == user_id).first()
-    if not query:
-        raise HTTPException(status_code=404, detail='user not found for this id')
-    else:
-        query.name = new_data.name
-        query.email = new_data.email
-        db.commit()
-        db.refresh(query)
-        return query
+# # update user details using put
+# @app.put('/users/{user_id}', response_model=UserOut, status_code=200)
+# async def update_user_details(user_id: int, new_data: UserCreate, db:Session = Depends(get_db)):
+#     query = query=db.query(User).filter(User.id == user_id).first()
+#     if not query:
+#         raise HTTPException(status_code=404, detail='user not found for this id')
+#     else:
+#         query.name = new_data.name
+#         query.email = new_data.email
+#         db.commit()
+#         db.refresh(query)
+#         return query
     
-@app.delete('/users/{user_id}',status_code=200)
-async def delete_user_by_id(user_id: int, db:Session = Depends(get_db)):
-    query=db.query(User).filter(User.id == user_id).first()
-    if not query:
-        raise HTTPException(status_code=404, detail='user not found for this id')
-    else:
-       db.delete(query)
-       db.commit()
-       return {'message': 'User deleted Successfully!!'}
+# @app.delete('/users/{user_id}',status_code=200)
+# async def delete_user_by_id(user_id: int, db:Session = Depends(get_db)):
+#     query=db.query(User).filter(User.id == user_id).first()
+#     if not query:
+#         raise HTTPException(status_code=404, detail='user not found for this id')
+#     else:
+#        db.delete(query)
+#        db.commit()
+#        return {'message': 'User deleted Successfully!!'}
     
  
-@app.post('/register',response_model=UserOut, status_code=201)
-def register_user(user: UserCreate, db: Session = Depends(get_db)):
-    existing_user = db.query(User).filter(User.email == user.email).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    hashed = hash_password(user.password)
-    new_user = User(name=user.name, email=user.email, password=hashed)
-    db.add(new_user)
-    db.commit()
-    db.refresh(new_user)
-    return new_user 
+# @app.post('/register',response_model=UserOut, status_code=201)
+# def register_user(user: UserCreate, db: Session = Depends(get_db)):
+#     existing_user = db.query(User).filter(User.email == user.email).first()
+#     if existing_user:
+#         raise HTTPException(status_code=400, detail="Email already registered")
+#     hashed = hash_password(user.password)
+#     new_user = User(name=user.name, email=user.email, password=hashed)
+#     db.add(new_user)
+#     db.commit()
+#     db.refresh(new_user)
+#     return new_user 
 
-@app.post('/login', response_model=UserToken, status_code=200)
-def user_login(user: UserLogin, db:Session = Depends(get_db)):
-    is_user = db.query(User).filter(User.email == user.email).first()
-    if not is_user:
-        raise HTTPException(status_code=400, detail='User doesnot exist!!')
-    else:
-        hashed = hash_password(user.password)
-        password_valid = verify_password(user.password, is_user.password)
-        if not password_valid:
-            raise HTTPException(status_code=401, detail='Incorrect Password!!')
-        return {'access_token': create_access_token(dict(user))}
+# @app.post('/login', response_model=UserToken, status_code=200)
+# def user_login(user: UserLogin, db:Session = Depends(get_db)):
+#     is_user = db.query(User).filter(User.email == user.email).first()
+#     if not is_user:
+#         raise HTTPException(status_code=400, detail='User doesnot exist!!')
+#     else:
+#         hashed = hash_password(user.password)
+#         password_valid = verify_password(user.password, is_user.password)
+#         if not password_valid:
+#             raise HTTPException(status_code=401, detail='Incorrect Password!!')
+#         return {'access_token': create_access_token(dict(user))}
 
     
